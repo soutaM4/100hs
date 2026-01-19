@@ -2,121 +2,198 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>100均魔改造アーカイブ - 会員専用</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>100均魔改造アーカイブ 🛠️</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; }
-        .container { max-width: 600px; margin: auto; }
-        h1 { color: #00ff88; text-align: center; border-bottom: 2px solid #00ff88; }
-        .auth-box, .post-form { background: #1e1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
-        input, textarea { width: 100%; margin: 8px 0; padding: 12px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
-        button { padding: 10px 15px; background: #00ff88; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; margin-right: 5px; }
-        .btn-delete { background: #ff4444; color: white; margin-top: 10px; font-size: 0.8rem; }
-        .card { background: #1e1e1e; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #00ff88; }
-        .hidden { display: none; }
+        :root { --bg: #0f0f0f; --panel: #1a1a1a; --accent: #00ff88; --text: #f0f0f0; --border: #333; }
+        body { background: var(--bg); color: var(--text); font-family: 'Hiragino Kaku Gothic ProN', sans-serif; margin: 0; padding: 20px; overflow-y: scroll; }
+        .container { max-width: 800px; margin: auto; }
+        
+        /* ヘッダー */
+        header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .site-title h1 { margin: 0; font-size: 1.5rem; color: var(--accent); letter-spacing: 2px; }
+        .site-title p { margin: 5px 0 0 0; font-size: 0.7rem; color: #666; font-weight: bold; }
+
+        /* タブ切り替え */
+        .tabs { display: flex; gap: 20px; margin-bottom: 20px; border-bottom: 1px solid #222; }
+        .tab { padding: 10px 5px; cursor: pointer; color: #666; font-size: 0.9rem; font-weight: bold; transition: 0.3s; border-bottom: 2px solid transparent; }
+        .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .tab:hover { color: #fff; }
+
+        /* ボタン */
+        button { padding: 10px 20px; background: var(--accent); border: none; color: #000; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s; }
+        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+        .btn-delete { background: #2a1111; color: #ff4444; border: 1px solid #ff4444; margin-top: 30px; }
+
+        /* 検索 */
+        .search-input { width: 100%; font-size: 1.1rem; border: none; border-bottom: 2px solid var(--border); background: transparent; color: white; padding: 15px 0; margin-bottom: 20px; outline: none; }
+        .search-input:focus { border-color: var(--accent); }
+        
+        /* 記事一覧 */
+        .post-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .card { background: var(--panel); padding: 25px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; transition: 0.3s; }
+        .card:hover { border-color: var(--accent); background: #222; }
+        .card h3 { margin: 0; font-size: 1.2rem; }
+        .card .date { font-size: 0.7rem; color: #555; margin-top: 10px; display: block; }
+
+        /* モーダル */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .modal-overlay { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.92); backdrop-filter: blur(8px); }
+        .modal-content { position: relative; width: 90%; max-width: 600px; max-height: 85vh; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 40px; overflow-y: auto; }
+        .close-modal { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #555; }
+
+        input, textarea { width: 100%; margin: 10px 0; padding: 12px; background: #000; border: 1px solid var(--border); color: white; border-radius: 6px; box-sizing: border-box; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🛠 100均魔改造アーカイブ</h1>
+    <header>
+        <div class="site-title">
+            <h1>100均魔改造アーカイブ</h1>
+            <p>CUSTOM & HACK LOGS 🛠️</p>
+        </div>
+        <div id="nav-btns">
+            <button id="main-action-btn" onclick="handleMainAction()">LOADING...</button>
+            <button id="logout-btn" class="btn-outline hidden" onclick="signOut()" style="margin-left:5px;">EXIT</button>
+        </div>
+    </header>
 
-    <div id="auth-section" class="auth-box">
-        <h3>ログイン / 会員登録</h3>
-        <p style="font-size: 0.8rem;">※新規登録後はメールのURLを必ずクリックしてください</p>
-        <input type="email" id="email" placeholder="メールアドレス">
-        <input type="password" id="password" placeholder="パスワード">
-        <button onclick="signUp()">新規登録</button>
-        <button onclick="signIn()">ログイン</button>
+    <div class="tabs">
+        <div id="tab-all" class="tab active" onclick="switchTab('all')">ALL ARCHIVES</div>
+        <div id="tab-mine" class="tab hidden" onclick="switchTab('mine')">MY ARCHIVES</div>
     </div>
 
-    <div id="post-section" class="post-form hidden">
-        <div id="user-info" style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;"></div>
-        <input type="text" id="t" placeholder="改造のタイトル">
-        <textarea id="c" rows="3" placeholder="改造の内容や使った材料"></textarea>
-        <button onclick="send()">世界に公開する</button>
-        <button onclick="signOut()" style="background:#555;">ログアウト</button>
-    </div>
+    <input type="text" id="searchInput" class="search-input" placeholder="アーカイブを検索..." oninput="load()">
 
-    <div id="list">読み込み中...</div>
+    <div id="list" class="post-grid">LOADING...</div>
+</div>
+
+<div id="view-modal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeView()"></div>
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeView()">×</span>
+        <div id="view-area"></div>
+    </div>
+</div>
+
+<div id="editor-section" class="modal hidden">
+    <div class="modal-overlay" onclick="toggleEditor()"></div>
+    <div class="modal-content">
+        <h2 style="font-size: 1.2rem; color: var(--accent);">🛠️ 新規魔改造の記録</h2>
+        <input type="text" id="t" placeholder="魔改造タイトル">
+        <textarea id="c" rows="12" placeholder="改造の手順、Blender設計メモなど..."></textarea>
+        <button onclick="send()" style="width: 100%;">PUBLISH ARCHIVE</button>
+    </div>
+</div>
+
+<div id="auth-modal" class="modal hidden">
+    <div class="modal-overlay" onclick="toggleAuth()"></div>
+    <div class="modal-content" style="max-width: 400px;">
+        <h2 style="font-size: 1.2rem; color: var(--accent); margin-top:0;">ACCESS ARCHIVE</h2>
+        <input type="email" id="email" placeholder="EMAIL">
+        <input type="password" id="password" placeholder="PASSWORD">
+        <div style="margin-top: 15px; display: flex; gap: 10px;">
+            <button onclick="signIn()" style="flex: 1;">LOGIN</button>
+            <button onclick="signUp()" class="btn-outline" style="flex: 1;">JOIN</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    // --- 【エラー対策済み】URLとKEYの設定 ---
-    // 文字列を分解して結合することで、目に見えない記号が入るのを防ぎます
-    const protocol = "https://";
-    const projectID = "xkcoybhgybehcplrnjpy";
-    const domain = ".supabase.co";
-    const FINAL_URL = (protocol + projectID + domain).trim();
-    
-    const FINAL_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrY295YmhneWJlaGNwbHJuanB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MTk5MzEsImV4cCI6MjA4NDM5NTkzMX0.KAukWRsZcdjiC8rEITmPRRdJ6nj-s7pMDdpcBOBPNek'.trim();
-
-    // 接続（Malformedエラーを回避する一番安全な方法）
-    const client = supabase.createClient(FINAL_URL, FINAL_KEY);
+    const p1 = "https://", p2 = "xkcoybhgybehcplrnjpy", p3 = ".supabase.co";
+    const FINAL_URL = p1 + p2 + p3;
+    const k1 = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrY295YmhneWJlaGNwbHJuanB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MTk5MzEsImV4cCI6MjA4NDM5NTkzMX0.', k2 = 'KAukWRsZcdjiC8rEITmPRRdJ6nj-s7pMDdpcBOBPNek';
+    const client = supabase.createClient(FINAL_URL, k1 + k2);
 
     let currentUser = null;
+    let allPosts = [];
+    let currentTab = 'all'; // 現在の表示モード ('all' か 'mine')
 
-    // ログイン状態監視
     client.auth.onAuthStateChange((event, session) => {
         currentUser = session?.user || null;
+        const btn = document.getElementById('main-action-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const myTab = document.getElementById('tab-mine');
+        
         if (currentUser) {
-            document.getElementById('auth-section').classList.add('hidden');
-            document.getElementById('post-section').classList.remove('hidden');
-            document.getElementById('user-info').innerText = `ログイン中: ${currentUser.email}`;
+            btn.innerText = "+ 魔改造を記録";
+            btn.classList.remove('btn-outline');
+            logoutBtn.classList.remove('hidden');
+            myTab.classList.remove('hidden');
+            document.getElementById('auth-modal').classList.add('hidden');
         } else {
-            document.getElementById('auth-section').classList.remove('hidden');
-            document.getElementById('post-section').classList.add('hidden');
+            btn.innerText = "LOGIN / JOIN";
+            btn.classList.add('btn-outline');
+            logoutBtn.classList.add('hidden');
+            myTab.classList.add('hidden');
+            currentTab = 'all'; // ログアウトしたらALLに戻す
+            updateTabUI();
         }
         load();
     });
 
-    async function signUp() {
-        const e = document.getElementById('email').value;
-        const p = document.getElementById('password').value;
-        const { error } = await client.auth.signUp({ email: e, password: p });
-        if (error) alert("エラー: " + error.message);
-        else alert("確認メールを送りました！メールのリンクをクリックしてください。");
+    function switchTab(tab) {
+        currentTab = tab;
+        updateTabUI();
+        load();
     }
 
-    async function signIn() {
-        const e = document.getElementById('email').value;
-        const p = document.getElementById('password').value;
-        const { error } = await client.auth.signInWithPassword({ email: e, password: p });
-        if (error) alert("失敗: " + error.message);
-    }
-
-    async function signOut() {
-        await client.auth.signOut();
-        alert("ログアウトしました");
-    }
-
-    async function send() {
-        const t = document.getElementById('t');
-        const c = document.getElementById('c');
-        if(!t.value || !c.value) return alert("入力してね");
-        const { error } = await client.from('posts').insert([{ title: t.value, content: c.value, user_id: currentUser.id }]);
-        if (error) alert("投稿失敗: " + error.message);
-        else { t.value = ''; c.value = ''; load(); }
+    function updateTabUI() {
+        document.getElementById('tab-all').classList.toggle('active', currentTab === 'all');
+        document.getElementById('tab-mine').classList.toggle('active', currentTab === 'mine');
     }
 
     async function load() {
-        const { data, error } = await client.from('posts').select('*').order('created_at', { ascending: false });
+        const keyword = document.getElementById('searchInput').value;
+        let query = client.from('posts').select('*').order('created_at', { ascending: false });
+        
+        // 検索フィルター
+        if (keyword) query = query.or(`title.ilike.%${keyword}%,content.ilike.%${keyword}%`);
+        
+        // 【重要】自分専用タブの時は自分のIDで絞り込む
+        if (currentTab === 'mine' && currentUser) {
+            query = query.eq('user_id', currentUser.id);
+        }
+
+        const { data, error } = await query;
         if (error) return;
+        allPosts = data;
         let h = '';
-        data.forEach(p => {
-            const isMyPost = currentUser && p.user_id === currentUser.id;
-            h += `<div class="card"><h3>${p.title}</h3><p>${p.content}</p>${isMyPost ? `<button class="btn-delete" onclick="deletePost('${p.id}')">削除する</button>` : ''}</div>`;
+        data.forEach((p, index) => {
+            h += `<div class="card" onclick="viewPost(${index})"><h3>${p.title}</h3><span class="date">${new Date(p.created_at).toLocaleDateString()}</span></div>`;
         });
-        document.getElementById('list').innerHTML = h || "投稿がありません。";
+        document.getElementById('list').innerHTML = h || `<p style="text-align:center; color:#444; margin-top:40px;">${currentTab === 'mine' ? 'まだ自分の記録がありません' : 'アーカイブがありません'}</p>`;
     }
 
-    async function deletePost(id) {
-        if (!confirm("消しますか？")) return;
-        const { error } = await client.from('posts').delete().eq('id', id);
-        if (error) alert("失敗: " + error.message);
-        else load();
+    // --- 以降、基本的な機能はそのまま ---
+    function handleMainAction() { currentUser ? toggleEditor() : toggleAuth(); }
+    function toggleEditor() { document.getElementById('editor-section').classList.toggle('hidden'); }
+    function toggleAuth() { document.getElementById('auth-modal').classList.toggle('hidden'); }
+    function viewPost(index) {
+        const p = allPosts[index];
+        const isMyPost = currentUser && p.user_id === currentUser.id;
+        document.getElementById('view-area').innerHTML = `
+            <h2 style="color:var(--accent);">${p.title}</h2>
+            <p style="white-space:pre-wrap; color:#ccc;">${p.content}</p>
+            ${isMyPost ? `<button class="btn-delete" onclick="deletePost('${p.id}')">DELETE ARCHIVE</button>` : ''}
+        `;
+        document.getElementById('view-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
     }
-
+    function closeView() { document.getElementById('view-modal').classList.add('hidden'); document.body.style.overflow = 'auto'; }
+    async function signUp() { const { error } = await client.auth.signUp({ email: document.getElementById('email').value, password: document.getElementById('password').value }); alert(error ? error.message : "Check Email!"); }
+    async function signIn() { const { error } = await client.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value }); if (error) alert(error.message); }
+    async function signOut() { await client.auth.signOut(); }
+    async function send() {
+        const t = document.getElementById('t'), c = document.getElementById('c');
+        const { error } = await client.from('posts').insert([{ title: t.value, content: c.value, user_id: currentUser.id }]);
+        if (error) alert(error.message); else { t.value = ''; c.value = ''; toggleEditor(); load(); }
+    }
+    async function deletePost(id) { if (!confirm("DELETE?")) return; await client.from('posts').delete().eq('id', id); closeView(); load(); }
     load();
 </script>
 </body>
